@@ -1,31 +1,28 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/xavier-niu/xnrpc/pkg/rpc"
-	"github.com/xavier-niu/xnrpc/pkg/rpc/codec"
+	c "github.com/xavier-niu/xnrpc/pkg/rpc/client"
 	"log"
-	"net"
+	"sync"
 )
 
 func main() {
-	conn, _ := net.Dial("tcp", "127.0.0.1:10000")
-	defer func() { _ = conn.Close() }()
+	client, _ := c.Dial("tcp", ":10000")
+	defer func() { _ = client.Close() }()
 
-	_ = json.NewEncoder(conn).Encode(rpc.DefaultOption)
-	cc := codec.NewGobCodec(conn)
-	// send request & receive response
+	wg := new(sync.WaitGroup)
 	for i:=0; i<5; i++ {
-		h := &codec.Header{
-			ServiceMethod: "Foo.Sum",
-			Seq: uint64(i),
-		}
-
-		_ = cc.Write(h, fmt.Sprintf("geerpc req %d", h.Seq))
-		_ = cc.ReadHeader(h)
-		var reply string
-		_ = cc.ReadBody(&reply)
-		log.Println("reply: ", reply)
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			args := fmt.Sprintf("geerpc req %d", i)
+			var reply string
+			if err := client.Call("Foo.Sum", args, &reply); err != nil {
+				log.Fatal("call Foo.Sum error:", err)
+			}
+			log.Println("reply:", reply)
+		}(i)
 	}
+	wg.Wait()
 }

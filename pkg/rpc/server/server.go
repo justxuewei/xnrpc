@@ -1,8 +1,9 @@
-package rpc
+package server
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/xavier-niu/xnrpc/pkg/rpc"
 	"github.com/xavier-niu/xnrpc/pkg/rpc/codec"
 	"io"
 	"log"
@@ -11,23 +12,11 @@ import (
 	"sync"
 )
 
-const MagicNumber = 0x3bef5c
-
-type Option struct {
-	MagicNumber int
-	CodecType   codec.Type
-}
-
-var DefaultOption = &Option{
-	MagicNumber: MagicNumber,
-	CodecType:   codec.GobType,
-}
-
 // ----- Server -----
 
 var DefaultServer = NewServer()
 
-type Server struct {}
+type Server struct{}
 
 func NewServer() *Server {
 	return &Server{}
@@ -48,12 +37,12 @@ func (s *Server) ServeConn(conn io.ReadWriteCloser) {
 	defer func() {
 		_ = conn.Close()
 	}()
-	var opt Option
+	var opt rpc.Option
 	if err := json.NewDecoder(conn).Decode(&opt); err != nil {
 		log.Println("rpc server: options error: ", err)
 		return
 	}
-	if opt.MagicNumber != MagicNumber {
+	if opt.MagicNumber != rpc.MagicNumber {
 		log.Printf("rpc server: invalid magic number %x", opt.MagicNumber)
 		return
 	}
@@ -88,11 +77,6 @@ func (s *Server) serveCodec(cc codec.Codec) {
 	}
 	wg.Wait()
 	_ = cc.Close()
-}
-
-type request struct {
-	h *codec.Header
-	argv, replyv reflect.Value
 }
 
 func (s *Server) readRequestHeader(cc codec.Codec) (*codec.Header, error) {

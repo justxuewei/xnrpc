@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/xavier-niu/xnrpc/pkg/rpc"
+	"github.com/xavier-niu/xnrpc/pkg/rpc/server"
 	"log"
 	"net"
 )
@@ -13,6 +13,6 @@ func main() {
 	}
 	log.Println("start rpc server on", l.Addr())
 	for {
-		rpc.Accept(l)
+		server.Accept(l)
 	}
 }
